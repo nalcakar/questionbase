@@ -124,6 +124,11 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+.highlight {
+  background-color: yellow;
+  font-weight: bold;
+}
+
   </style>
 </head>
 <body>
@@ -476,11 +481,66 @@ async function confirmMainTopic() {
 function filterQuestions() {
   const term = document.getElementById("searchInput").value.toLowerCase();
   const cards = document.querySelectorAll(".question-card");
+  let visibleCount = 0;
+
   cards.forEach(card => {
-    const questionText = card.querySelector(".q-text").value.toLowerCase();
-    card.style.display = questionText.includes(term) ? "block" : "none";
+    // Orijinal metni temizle (önceki highlight'ları sıfırla)
+    const questionInput = card.querySelector(".q-text");
+    const explanationInput = card.querySelector(".q-explanation");
+    const answerInput = card.querySelector(".q-answer");
+    const optionInputs = card.querySelectorAll("input[data-key]");
+
+    const resetHighlight = el => {
+      if (el) {
+        el.value = el.value; // bu input'larda highlight desteklenmez ama arka planda tutabiliriz
+        el.classList.remove("highlight");
+      }
+    };
+
+    resetHighlight(questionInput);
+    resetHighlight(explanationInput);
+    resetHighlight(answerInput);
+    optionInputs.forEach(resetHighlight);
+
+    const textParts = [
+      questionInput?.value.toLowerCase() || "",
+      explanationInput?.value.toLowerCase() || "",
+      answerInput?.value.toLowerCase() || "",
+      Array.from(optionInputs).map(i => i.value.toLowerCase()).join(" ")
+    ];
+
+    const combinedText = textParts.join(" ");
+    const matched = combinedText.includes(term);
+
+    card.style.display = matched ? "block" : "none";
+
+    if (matched && term !== "") {
+      visibleCount++;
+
+      // Vurgu (sadece textarea/input'larda highlight görünmeyecek, ama dilersen içerikleri değiştirebiliriz)
+      if (questionInput && questionInput.value.toLowerCase().includes(term)) {
+        questionInput.classList.add("highlight");
+      }
+      optionInputs.forEach(input => {
+        if (input.value.toLowerCase().includes(term)) {
+          input.classList.add("highlight");
+        }
+      });
+      if (answerInput && answerInput.value.toLowerCase().includes(term)) {
+        answerInput.classList.add("highlight");
+      }
+      if (explanationInput && explanationInput.value.toLowerCase().includes(term)) {
+        explanationInput.classList.add("highlight");
+      }
+    }
   });
+
+  // ✅ Filtrelenmiş sonuç sayısını göster
+  const total = document.querySelectorAll(".question-card").length;
+  const resultText = term ? `🔍 ${visibleCount} sonuç bulundu / Toplam ${total}` : `📋 Toplam Soru: ${total}`;
+  document.getElementById("question-count").textContent = resultText;
 }
+
 
 function onCategoryChange(newCategoryId) {
   selectedCategoryId = newCategoryId;
@@ -637,7 +697,7 @@ async function generateAIQuestionFromTopic() {
   showLoader(); // ← LOADER GÖSTER
 
   const prompt = `
-"${topic}" konusuyla ilgili düşündürücü bir çoktan seçmeli soru oluştur. Şıklar benzemesin. Cevap ve açıklama da ver.
+"${topic}" konusuyla ilgili düşündürücü bir çoktan bir seçmeli soru oluştur. Soru açık ve net olsun. Şıklar benzemesin. Cevap ve açıklama da ver.
 
 Biçim:
 1. [Soru]  
