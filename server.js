@@ -27,13 +27,16 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ✅ SESSION Ayarı (Render için uygun)
+// ✅ 🔥 SESSION FIX (Proxy + Secure)
+app.set("trust proxy", 1); // 🧠 Render için şart
+
 app.use(session({
   secret: process.env.SESSION_SECRET || "keyboard cat",
   resave: false,
   saveUninitialized: false,
+  proxy: isProd, // 🔥 olmazsa cookie yazılmaz!
   cookie: {
-    secure: isProd, // Render HTTPS → true
+    secure: isProd, // HTTPS için true
     sameSite: isProd ? "none" : "lax"
   }
 }));
@@ -41,7 +44,7 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ✅ Kullanıcıyı serialize/deserialize et
+// ✅ serialize/deserialize
 passport.serializeUser((user, done) => {
   done(null, user);
 });
@@ -55,7 +58,7 @@ passport.use(new PatreonStrategy({
   clientSecret: process.env.PATREON_CLIENT_SECRET,
   callbackURL: isProd
     ? "https://questionbase-o6jk.onrender.com/auth/patreon/callback"
-    : "http://localhost:3001/auth/patreon/callback",
+    : "http://localhost:3000/auth/patreon/callback",
   scope: ['identity', 'identity.memberships']
 }, async (accessToken, refreshToken, profile, done) => {
   try {
@@ -69,10 +72,9 @@ passport.use(new PatreonStrategy({
   return done(null, profile);
 }));
 
-// ✅ Giriş Başlat
+// ✅ Giriş
 app.get("/auth/patreon", passport.authenticate("patreon"));
 
-// ✅ Giriş Callback
 app.get("/auth/patreon/callback",
   passport.authenticate("patreon", {
     failureRedirect: "/login-failed",
@@ -80,12 +82,11 @@ app.get("/auth/patreon/callback",
   })
 );
 
-// ✅ Giriş Başarısız
 app.get("/login-failed", (req, res) => {
   res.send(`<h2>❌ Giriş başarısız oldu</h2><a href="/">🔙 Ana sayfa</a>`);
 });
 
-// ✅ Üyelik Durumu
+// ✅ Kullanıcı durumu
 app.get("/me", (req, res) => {
   if (!req.isAuthenticated()) return res.json({ isLoggedIn: false });
 
@@ -114,14 +115,14 @@ app.get("/me", (req, res) => {
   });
 });
 
-// ✅ Çıkış
+// ✅ Logout
 app.get("/logout", (req, res) => {
   req.logout(() => {
     res.redirect("/");
   });
 });
 
-// ✅ OpenAI API
+// ✅ OpenAI endpoint
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
@@ -146,7 +147,7 @@ app.post("/openai", async (req, res) => {
   }
 });
 
-// ✅ Sunucuyu Başlat
+// ✅ Başlat
 app.listen(PORT, () => {
   console.log(`🚀 Sunucu aktif: http://localhost:${PORT}`);
 });
