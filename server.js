@@ -276,6 +276,32 @@ app.post("/update-main-topic-name", authMiddleware, async (req, res) => {
   await pool.query(`UPDATE main_topics SET name = $1 WHERE id = $2`, [newName, mainTopicId]);
   res.json({ success: true });
 });
+const { OpenAI } = require("openai");
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+app.post("/openai", async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.status(400).json({ error: "Prompt boş olamaz." });
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 1500
+    });
+
+    
+    const reply = completion.choices[0].message.content.trim();
+    res.json({ reply });
+  } catch (error) {
+    console.error("OpenAI API hatası:", error.message);
+    res.status(500).json({ error: "OpenAI isteği başarısız oldu." });
+  }
+});
 
 // ---------------- Sunucu ----------------
 
@@ -284,3 +310,4 @@ app.listen(PORT, async () => {
   await setupTables();
   await setupDefaultMainTopic();
 });
+

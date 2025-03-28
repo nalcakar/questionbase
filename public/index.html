@@ -398,7 +398,7 @@ function parseToHtml(text) {
 
       const payload = { prompt };
 
-      const response = await fetch("https://questionbase-o6jk.onrender.com/openai", {
+      const response = await fetch("/openai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>OpenAI Soru Üretme Testi</title>
+</head>
+<body style="font-family:sans-serif; padding: 30px;">
+
+  <h2>📘 GPT-3.5 Soru Üretici</h2>
+  <p>Prompt girin ve <b>GPT'den cevap alın!</b></p>
+
+  <textarea id="prompt" rows="5" cols="50" placeholder="Örn: Bir ilginç tarih sorusu üret."></textarea>
+  <br><br>
+  <button onclick="generate()">🚀 Soru Üret</button>
+
+  <hr>
+  <div id="response" style="white-space:pre-wrap; background:#f9f9f9; padding:10px; border-radius:5px;"></div>
+
+  <script>
+    async function generate() {
+      const prompt = document.getElementById("prompt").value;
+      const responseDiv = document.getElementById("response");
+
+      if (!prompt.trim()) {
+        responseDiv.innerText = "❌ Lütfen bir prompt girin.";
+        return;
+      }
+
+      responseDiv.innerText = "⏳ GPT'den cevap bekleniyor...";
+
+      try {
+        const res = await fetch("/openai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt })
+        });
+
+        const data = await res.json();
+
+        if (data.reply) {
+          responseDiv.innerText = "✅ Cevap:\n\n" + data.reply;
+        } else {
+          responseDiv.innerText = "⚠️ Hata: " + (data.error || "Bilinmeyen hata");
+        }
+      } catch (err) {
+        responseDiv.innerText = "🚫 Sunucu hatası: " + err.message;
+      }
+    }
+  </script>
+
+</body>
+</html>
