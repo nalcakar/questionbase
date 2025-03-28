@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
+const pgSession = require("connect-pg-simple")(session); // ← BUNU EKLE
 const bodyParser = require("body-parser");
 const path = require("path");
 const axios = require("axios");
@@ -27,15 +28,21 @@ app.set("trust proxy", 1); // Render için HTTPS üzerinden gelen proxy'yi güve
 
 // 🔐 Oturum Ayarı
 app.use(session({
-  secret: process.env.SESSION_SECRET || "gizli",
-  resave: false,
-  saveUninitialized: false,
-  proxy: isProd,
-  cookie: {
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax"
-  }
-}));
+    store: new pgSession({
+      pool: pool, // bu zaten ./db'den gelen mevcut PostgreSQL bağlantın
+      tableName: "session" // istersen tablo adını özelleştirebilirsin
+    }),
+    secret: process.env.SESSION_SECRET || "gizli",
+    resave: false,
+    saveUninitialized: false,
+    proxy: isProd,
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000, // 1 gün
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax"
+    }
+  }));
+  
 
 // ---------------- AUTH ----------------
 
