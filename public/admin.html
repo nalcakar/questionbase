@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Paneli</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
+      background-color: #f8f9fa;
+    }
+
+    h2 {
+      font-size: 18px;
+      margin: 0 0 10px;
+    }
+
+    .sidebar, .middle, .main {
+      padding: 15px;
+      overflow-y: auto;
+    }
+
+    .sidebar {
+      width: 20%;
+      background: #e9ecef;
+      border-right: 1px solid #ced4da;
+    }
+
+    .middle {
+      width: 30%;
+      background: #f1f3f5;
+      border-right: 1px solid #ced4da;
+    }
+
+    .main {
+      width: 50%;
+      background: #ffffff;
+    }
+
+    .item {
+      padding: 10px;
+      margin-bottom: 8px;
+      background-color: #ffffff;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .item:hover {
+      background-color: #f1f3f5;
+    }
+
+    .selected {
+      background-color: #d0ebff !important;
+      border-color: #74c0fc;
+    }
+
+    .question-card {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .question-card textarea,
+    .question-card input {
+      width: 100%;
+      padding: 8px;
+      margin: 6px 0;
+      font-size: 14px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .btns {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .btns button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .save-btn {
+      background-color: #51cf66;
+      color: white;
+    }
+
+    .delete-btn {
+      background-color: #ff6b6b;
+      color: white;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+        height: auto;
+      }
+
+      .sidebar, .middle, .main {
+        width: 100%;
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>Üst Başlıklar</h2>
+    <div id="mainTopicAddSection">
+        <button id="showAddMainBtn" style="width:100%; padding:6px; background:#339af0; color:white; border:none; border-radius:5px; cursor:pointer;">➕ Yeni Başlık</button>
+        <div id="mainTopicForm" style="display:none; margin-top:8px;">
+          <input type="text" id="newMainTopic" placeholder="Yeni üst başlık..." style="width:100%; padding:6px; margin-bottom:6px; border-radius:5px; border:1px solid #ccc;" />
+          <button onclick="confirmMainTopic()" style="width:100%; padding:6px; background:#51cf66; color:white; border:none; border-radius:5px; cursor:pointer;">✅ Onayla</button>
+        </div>
+      </div>
+      
+    <div id="mainTopics"></div>
+  </div>
+
+  <div class="middle">
+    <h2>Alt Kategoriler</h2>
+    
+    <div id="categories"></div>
+  </div>
+
+  <div class="main">
+    <h2>Sorular</h2>
+    <div id="question-count" style="margin-bottom: 12px; font-size: 15px; color: #444;"></div>
+    <button id="generate-question-btn" style="margin-bottom: 10px; padding: 8px 14px; background-color: #228be6; color: white; border: none; border-radius: 5px; cursor: pointer;">➕ Yeni Soru Oluştur</button>
+    <input type="text" id="searchInput" placeholder="Soru içinde ara..." style="width:100%; padding:8px; margin-bottom:10px; border-radius:6px; border:1px solid #ccc;" oninput="filterQuestions()" />
+
+    <div id="questions"></div>
+  </div>
+<!-- Soru Önizleme Modali -->
+<div id="questionModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+  <div style="background:white; padding:20px; max-width:600px; width:90%; border-radius:10px;">
+    <h3>Oluşturulan Soru</h3>
+    <div id="modalContent" style="white-space:pre-wrap; font-size:15px; margin-bottom:15px;"></div>
+    <button id="confirmSaveBtn" style="background:#28a745; color:white; padding:8px 16px; border:none; border-radius:5px; margin-right:10px;">✅ Kaydet</button>
+    <button onclick="closeModal()" style="background:#dee2e6; padding:8px 16px; border:none; border-radius:5px;">❌ Vazgeç</button>
+  </div>
+</div>
+
+  <script>
+    let selectedMainTopicId = null;
+    let selectedCategoryId = null;
+
+    async function fetchMainTopics() {
+  const res = await fetch("/get-main-topics");
+  const topics = await res.json();
+  const container = document.getElementById("mainTopics");
+  container.innerHTML = "";
+
+  topics.forEach(topic => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span class="main-topic-name">${topic.name}</span>
+        <button onclick="toggleEditName(this)" style="background:none; border:none; cursor:pointer;">📝</button>
+      </div>
+      <div class="edit-name-form" style="display:none; margin-top:8px;">
+        <input type="text" value="${topic.name}" class="edit-name-input" style="width:100%; padding:6px; border-radius:5px;" />
+        <button onclick="saveMainTopicName(${topic.id}, this.previousElementSibling.value)" style="margin-top:6px; width:100%; background:#228be6; color:white; border:none; padding:6px; border-radius:5px;">✅ Onayla</button>
+      </div>
+    `;
+
+    div.onclick = (e) => {
+      if (e.target.tagName === "BUTTON" || e.target.tagName === "INPUT") return;
+      selectedMainTopicId = topic.id;
+      highlightSelected(container, div);
+      fetchCategories(topic.id);
+      document.getElementById("questions").innerHTML = "";
+    };
+
+    container.appendChild(div);
+  });
+
+  if (topics.length > 0) container.firstChild.click();
+}
+
+function toggleEditName(btn) {
+  const form = btn.closest('.item').querySelector('.edit-name-form');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveMainTopicName(mainTopicId, newName) {
+  const res = await fetch("/update-main-topic-name", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mainTopicId, newName })
+  });
+
+  const result = await res.json();
+  if (result.success) {
+    alert("✅ Başlık güncellendi");
+    fetchMainTopics();
+  } else {
+    alert("❌ Güncelleme başarısız");
+  }
+}
+
+async function fetchCategories(mainTopicId) {
+  const res = await fetch(`/get-categories?main_topic_id=${mainTopicId}`);
+  const cats = await res.json();
+  const container = document.getElementById("categories");
+  container.innerHTML = "";
+
+  const allMainTopics = await fetch("/get-main-topics").then(r => r.json());
+
+  cats.forEach(cat => {
+    const div = document.createElement("div");
+    div.className = "item";
+
+    div.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="cat-name">${cat.name}</span>
+        <button onclick="toggleCategoryEdit(this)" style="background:none; border:none; cursor:pointer;">📝</button>
+      </div>
+      <div class="edit-form" style="display:none; margin-top:8px;">
+        <input type="text" value="${cat.name}" class="edit-cat-input" style="width:100%; padding:6px; border-radius:5px; margin-bottom:6px;" />
+        <button onclick="saveCategoryName(${cat.id}, this.previousElementSibling.value)" style="margin-bottom:10px; width:100%; background:#20c997; color:white; border:none; padding:6px; border-radius:5px;">✅ Kategori Adını Kaydet</button>
+        <select style="width:100%; padding:6px; border-radius:5px;" data-cat-id="${cat.id}" id="change-select-${cat.id}">
+          ${allMainTopics.map(mt => `
+            <option value="${mt.id}" ${mt.id === cat.main_topic_id ? "selected" : ""}>${mt.name}</option>
+          `).join("")}
+        </select>
+        <button onclick="changeCategoryMainTopic(${cat.id}, document.getElementById('change-select-${cat.id}').value)" style="margin-top:6px; width:100%; background:#ffa94d; color:white; border:none; padding:6px; border-radius:5px;">↔ Üst Başlığı Değiştir</button>
+      </div>
+    `;
+
+    div.onclick = (e) => {
+      if (e.target.tagName.toLowerCase() === 'select' || e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+      selectedCategoryId = cat.id;
+      highlightSelected(container, div);
+      fetchQuestions(cat.id);
+    };
+
+    container.appendChild(div);
+  });
+}
+
+function toggleCategoryEdit(btn) {
+  const form = btn.closest('.item').querySelector('.edit-form');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function saveCategoryName(categoryId, newName) {
+  const res = await fetch("/update-category-name", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ categoryId, newName })
+  });
+
+  const result = await res.json();
+  if (result.success) {
+    alert("✅ Kategori adı güncellendi!");
+    fetchCategories(selectedMainTopicId);
+  } else {
+    alert("❌ Güncelleme başarısız.");
+  }
+}
+
+function toggleCategoryEdit(btn) {
+  const form = btn.closest('.item').querySelector('.edit-form');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function changeCategoryMainTopic(categoryId, newMainTopicId) {
+  const res = await fetch("/update-category-main-topic", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ categoryId, newMainTopicId })
+  });
+
+  const result = await res.json();
+  if (result.success) {
+    alert("✅ Üst başlık güncellendi!");
+    fetchCategories(selectedMainTopicId); // eski yerden kaldır
+  } else {
+    alert("❌ Güncelleme başarısız!");
+  }
+}
+
+
+    async function fetchQuestions(categoryId) {
+      const res = await fetch(`/get-questions?category_id=${categoryId}`);
+      const questions = await res.json();
+      const container = document.getElementById("questions");
+      container.innerHTML = "";
+      document.getElementById("question-count").textContent = `📋 Toplam Soru: ${questions.length}`;
+
+      questions.forEach(q => {
+        const card = document.createElement("div");
+        card.className = "question-card";
+        card.innerHTML = `
+          <textarea class="q-text">${q.question_text}</textarea>
+          ${Object.entries(q.options || {}).map(([key, val]) => `
+            <input type="text" data-key="${key}" value="${val}" placeholder="Şık ${key}" />
+          `).join('')}
+         <div style="position: relative; display: flex; align-items: center; margin-top: 10px;">
+  <span style="position: absolute; left: 10px; font-size: 18px;">✅ </span>
+  <input
+    type="text"
+    class="q-answer"
+    value="${q.answer}"
+    placeholder="Cevap"
+    style="padding-left: 30px; background-color: #d3f9d8; border: 2px solid #51cf66; border-radius: 5px; flex: 1;"
+  />
+</div>
+          <textarea class="q-explanation" rows="2" placeholder="Açıklama">${q.explanation || ''}</textarea>
+          <div class="btns">
+            <button class="save-btn">Kaydet</button>
+            <button class="delete-btn">Sil</button>
+          </div>
+        `;
+
+        card.querySelector(".save-btn").onclick = async () => {
+          const updated = {
+            question_text: card.querySelector(".q-text").value,
+            answer: card.querySelector(".q-answer").value,
+            explanation: card.querySelector(".q-explanation").value,
+            options: Object.fromEntries([...card.querySelectorAll("input[data-key]")].map(i => [i.dataset.key, i.value]))
+          };
+          await fetch(`/update-question/${q.id}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updated)
+          });
+          alert("✅ Güncellendi");
+        };
+
+        card.querySelector(".delete-btn").onclick = async () => {
+  if (confirm("Bu soruyu silmek istiyor musun?")) {
+    await fetch(`/delete-question/${q.id}`, { method: "DELETE" });
+    card.remove();
+
+    // ✅ Sildikten sonra toplam soru sayısını güncelle
+    const currentCount = document.querySelectorAll(".question-card").length;
+    document.getElementById("question-count").textContent = `📋 Toplam Soru: ${currentCount}`;
+  }
+};
+
+
+        container.appendChild(card);
+      });
+    }
+
+    function highlightSelected(container, selected) {
+      const items = container.querySelectorAll(".item");
+      items.forEach(item => item.classList.remove("selected"));
+      selected.classList.add("selected");
+    }
+
+    fetchMainTopics();
+    document.getElementById("showAddMainBtn").onclick = () => {
+  document.getElementById("mainTopicForm").style.display = "block";
+  document.getElementById("showAddMainBtn").style.display = "none";
+};
+
+async function confirmMainTopic() {
+  const name = document.getElementById("newMainTopic").value.trim();
+  if (!name) return alert("Lütfen bir başlık girin.");
+
+  const res = await fetch("/add-main-topic", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+
+  const result = await res.json();
+  if (result && result.name) {
+    document.getElementById("newMainTopic").value = "";
+    document.getElementById("mainTopicForm").style.display = "none";
+    document.getElementById("showAddMainBtn").style.display = "block";
+    fetchMainTopics(); // listeyi yenile
+  }
+}
+
+    async function addMainTopic() {
+  const name = document.getElementById("newMainTopic").value.trim();
+  if (!name) return alert("Lütfen bir başlık girin.");
+
+  const res = await fetch("/add-main-topic", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  });
+
+  const result = await res.json();
+  if (result && result.name) {
+    document.getElementById("newMainTopic").value = "";
+    fetchMainTopics(); // listeyi güncelle
+  }
+}
+function filterQuestions() {
+  const term = document.getElementById("searchInput").value.toLowerCase();
+  const cards = document.querySelectorAll(".question-card");
+  cards.forEach(card => {
+    const questionText = card.querySelector(".q-text").value.toLowerCase();
+    card.style.display = questionText.includes(term) ? "block" : "none";
+  });
+}
+document.getElementById("generate-question-btn").addEventListener("click", async () => {
+  if (!selectedCategoryId) return alert("Lütfen önce bir kategori seçin.");
+
+  const res = await fetch(`/get-category-content?category_id=${selectedCategoryId}`);
+  const data = await res.json();
+  const content = data.content;
+
+  if (!content) return alert("Bu kategoride içerik bulunamadı.");
+
+  const prompt = `
+Aşağıdaki metne dayalı olarak 1 adet çoktan seçmeli soru oluştur. 
+Her sorunun 4 şıkkı (a,b,c,d), cevabı ve açıklaması olsun.
+
+Format:
+1. [Soru metni]
+a) ...
+b) ...
+c) ...
+d) ...
+Cevap: ...
+Açıklama: ...
+
+Metin:
+${content}
+`;
+
+  const response = await fetch("https://translate-app-yjvw.onrender.com/openai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt })
+  });
+
+  const result = await response.json();
+  if (!result.reply) return alert("Soru oluşturulamadı.");
+
+  const parsed = parseGeneratedQuestion(result.reply);
+  if (!parsed) return alert("Soru düzgün parse edilemedi.");
+
+  // ✅ Ön izleme modal'ını doldur ve göster
+  const modal = document.getElementById("questionModal");
+  const contentBox = document.getElementById("modalContent");
+  contentBox.innerText = `Soru: ${parsed.question}\n\na) ${parsed.choices.A}\nb) ${parsed.choices.B}\nc) ${parsed.choices.C}\nd) ${parsed.choices.D}\n\nCevap: ${parsed.answer}\n\nAçıklama: ${parsed.explanation}`;
+
+  modal.style.display = "flex";
+
+  // Modal içindeki kaydet butonuna handler bağla
+  document.getElementById("confirmSaveBtn").onclick = async () => {
+    const payload = {
+  question_text: parsed.question,
+  options: parsed.choices,
+  answer: parsed.answer, // ✅ Bu doğru
+  explanation: parsed.explanation,
+  language: "tr",
+  category_id: selectedCategoryId,
+  content
+};
+
+    const saveRes = await fetch("/save-question-by-category-id", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const saveResult = await saveRes.json();
+    if (saveResult.success) {
+      alert("✅ Soru başarıyla eklendi!");
+      fetchQuestions(selectedCategoryId);
+    } else {
+      alert("❌ Soru eklenemedi.");
+    }
+
+    closeModal();
+  };
+});
+
+function closeModal() {
+  document.getElementById("questionModal").style.display = "none";
+}
+
+function parseGeneratedQuestion(text) {
+  const lines = text.trim().split("\n").filter(l => l.trim() !== "");
+  const questionObj = {
+    question: "",
+    choices: { A: "", B: "", C: "", D: "" },
+    answer: "",
+    explanation: ""
+  };
+
+  for (let line of lines) {
+    line = line.trim();
+
+    if (/^\d+\./.test(line)) {
+      questionObj.question = line.replace(/^\d+\.\s*/, "").trim();
+    } else if (/^a\)/i.test(line)) {
+      questionObj.choices.A = line.replace(/^a\)\s*/i, "").trim();
+    } else if (/^b\)/i.test(line)) {
+      questionObj.choices.B = line.replace(/^b\)\s*/i, "").trim();
+    } else if (/^c\)/i.test(line)) {
+      questionObj.choices.C = line.replace(/^c\)\s*/i, "").trim();
+    } else if (/^d\)/i.test(line)) {
+      questionObj.choices.D = line.replace(/^d\)\s*/i, "").trim();
+    } else if (/^cevap:/i.test(line)) {
+  const ans = line.replace(/^cevap:\s*/i, "").trim();
+  const key = ans.charAt(0).toUpperCase();
+  questionObj.answer = questionObj.choices[key] || key;
+}else if (/^açıklama:/i.test(line)) {
+      questionObj.explanation = line.replace(/^açıklama:\s*/i, "").trim();
+    }
+  }
+
+  if (!questionObj.question || !questionObj.answer) return null;
+  return questionObj;
+}
+
+  </script>
+</body>
+</html>
