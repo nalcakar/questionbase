@@ -22,18 +22,18 @@ app.use(cors({
   credentials: true
 }));
 
-// ⭐️ JSON desteği + statik dosya sunumu
+// ⭐️ JSON ve statik dosyalar
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ⭐️ Session ayarları
+// ⭐️ Oturum ayarları
 app.use(session({
   secret: process.env.SESSION_SECRET || "keyboard cat",
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: isProd,                              // 🔒 HTTPS varsa true
-    sameSite: isProd ? "none" : "lax"            // 🧭 Render için none
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax"
   }
 }));
 app.use(passport.initialize());
@@ -47,7 +47,7 @@ passport.deserializeUser((obj, done) => {
   done(null, obj);
 });
 
-// ⭐️ Patreon OAuth Strategy (ortama göre URI seçimi)
+// ⭐️ Patreon stratejisi
 passport.use(new PatreonStrategy({
   clientID: process.env.PATREON_CLIENT_ID,
   clientSecret: process.env.PATREON_CLIENT_SECRET,
@@ -56,14 +56,14 @@ passport.use(new PatreonStrategy({
     : "http://localhost:3000/auth/patreon/callback",
   scope: ['identity', 'identity.memberships']
 }, async (accessToken, refreshToken, profile, done) => {
-  // Giriş yapan kullanıcı bilgileri burada
+  console.log("🔍 Giriş yapan kullanıcı:", JSON.stringify(profile.rawJson, null, 2));
   return done(null, profile);
 }));
 
 // ⭐️ Giriş başlat
 app.get("/auth/patreon", passport.authenticate("patreon"));
 
-// ⭐️ Giriş tamamlandıktan sonra dönüş
+// ⭐️ Callback dönüşü
 app.get("/auth/patreon/callback",
   passport.authenticate("patreon", {
     failureRedirect: "/login-failed",
@@ -71,7 +71,7 @@ app.get("/auth/patreon/callback",
   })
 );
 
-// ⭐️ Başarısız giriş için basit sayfa
+// ⭐️ Başarısız giriş
 app.get("/login-failed", (req, res) => {
   res.send(`
     <h2>❌ Giriş başarısız oldu</h2>
@@ -79,29 +79,30 @@ app.get("/login-failed", (req, res) => {
   `);
 });
 
-// ⭐️ Giriş yapan kullanıcı bilgisi (frontend bunu çağırır)
+// ⭐️ Giriş yapan kullanıcı bilgisi
 app.get("/me", (req, res) => {
-    if (req.isAuthenticated()) {
-      const included = req.user?.rawJson?.included;
-      const patronAttributes = included?.[0]?.attributes;
-  
-      const isPatron = patronAttributes?.patron_status === "active_patron";
-  
-      const email = req.user?.emails?.[0]?.value || null;
-  
-      res.json({
-        isLoggedIn: true,
-        isPatron,
-        name: req.user.displayName,
-        email
-      });
-    } else {
-      res.json({ isLoggedIn: false });
-    }
-  });
-  
+  if (req.isAuthenticated()) {
+    const included = req.user?.rawJson?.included || [];
 
-// ⭐️ Çıkış işlemi
+    // Tüm included dizisini kontrol et
+    const isPatron = included.some(item =>
+      item?.attributes?.patron_status === "active_patron"
+    );
+
+    const email = req.user?.emails?.[0]?.value || null;
+
+    res.json({
+      isLoggedIn: true,
+      isPatron,
+      name: req.user.displayName,
+      email
+    });
+  } else {
+    res.json({ isLoggedIn: false });
+  }
+});
+
+// ⭐️ Çıkış
 app.get("/logout", (req, res) => {
   req.logout(() => {
     res.redirect("/");
