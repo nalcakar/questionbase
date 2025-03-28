@@ -42,7 +42,7 @@ const languages = [
   // Çeviri için API çağrısı yapan fonksiyon
   async function translateText(text, targetLang) {
     try {
-      const response = await fetch("https://questionbase-o6jk.onrender.com/translate", {
+      const response = await fetch("/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: text, target: targetLang })
