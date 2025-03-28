@@ -45,10 +45,10 @@ const languages = [
       const response = await fetch("/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text, target: targetLang })
+        body: JSON.stringify({ text: text, targetLang: targetLang })
       });
       const data = await response.json();
-      return decodeHTMLEntities(data.translatedText); // <--- burada
+      return decodeHTMLEntities(data.translated); // <--- burada
     } catch (err) {
       console.error("Çeviri hatası:", err);
       return text;

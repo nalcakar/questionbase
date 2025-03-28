@@ -294,7 +294,32 @@ app.post("/openai", async (req, res) => {
       max_tokens: 1500
     });
 
-    
+app.post("/translate", async (req, res) => {
+  const { text, targetLang } = req.body;
+
+  if (!text || !targetLang) {
+    return res.status(400).json({ error: "Metin ve hedef dil gerekli." });
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{
+        role: "user",
+        content: `Lütfen aşağıdaki metni ${targetLang} diline çevir:\n\n"${text}"`
+      }],
+      temperature: 0.3,
+      max_tokens: 1000,
+    });
+
+    const translated = completion.choices[0].message.content.trim();
+    res.json({ translated });
+
+  } catch (error) {
+    console.error("Çeviri hatası:", error.message);
+    res.status(500).json({ error: "Çeviri başarısız oldu." });
+  }
+});
     const reply = completion.choices[0].message.content.trim();
     res.json({ reply });
   } catch (error) {
@@ -303,6 +328,8 @@ app.post("/openai", async (req, res) => {
   }
 });
 
+  
+  
 // ---------------- Sunucu ----------------
 
 app.listen(PORT, async () => {
