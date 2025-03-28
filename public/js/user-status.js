@@ -47,7 +47,7 @@ function showLoginButton() {
   loginBtn.innerHTML = `
     <p style="text-align:center; color:gray;">👤 Üye girişi yapmadınız. Yalnızca 5 soru görüntüleniyor.</p>
     <div style="text-align:center; margin-top:10px;">
-      <a href="/login">
+      <a href="/auth/patreon">
         <button style="background:#ff424d;color:white;padding:10px 20px;border:none;border-radius:6px;cursor:pointer;">Patreon ile Giriş Yap</button>
       </a>
     </div>
