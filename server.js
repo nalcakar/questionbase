@@ -45,14 +45,20 @@ passport.deserializeUser((obj, done) => {
 });
 
 // ⭐️ Patreon OAuth Stratejisi
+const isProd = process.env.NODE_ENV === "production";
+
 passport.use(new PatreonStrategy({
   clientID: process.env.PATREON_CLIENT_ID,
   clientSecret: process.env.PATREON_CLIENT_SECRET,
-  callbackURL: process.env.PATREON_CALLBACK_URL,
+  callbackURL: isProd
+    ? "https://questionbase-o6jk.onrender.com/auth/patreon/callback"
+    : "http://localhost:3001/auth/patreon/callback",
   scope: ['identity', 'identity.memberships']
-}, (accessToken, refreshToken, profile, done) => {
+}, async (accessToken, refreshToken, profile, done) => {
+  // Buraya kullanıcı kayıt/güncelleme işlemleri (istersen ekleyebiliriz)
   return done(null, profile);
 }));
+
 
 // ⭐️ Patreon giriş başlat
 app.get("/auth/patreon", passport.authenticate("patreon"));
