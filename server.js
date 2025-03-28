@@ -75,20 +75,26 @@ app.get("/login-failed", (req, res) => {
   res.send(`<h2>❌ Giriş başarısız oldu</h2><a href="/">🔙 Ana sayfa</a>`);
 });
 
+// 🔍 Gelişmiş kullanıcı kontrolü
 app.get("/me", (req, res) => {
   if (req.isAuthenticated()) {
-    const email =
-      req.user?.email ||
-      req.user?.rawJson?.data?.attributes?.email ||
-      null;
+    const raw = req.user.rawJson;
+    const included = raw?.included || [];
+    const relationships = raw?.data?.relationships;
 
-    const name =
-      req.user.displayName ||
-      req.user.rawJson?.data?.attributes?.full_name ||
-      "Kullanıcı";
+    // 1. included içinde patron_status = active_patron olan var mı?
+    const isActiveInIncluded = included.some(item =>
+      item?.attributes?.patron_status === "active_patron"
+    );
 
-    // 🧪 Test Modu: Herkesi üye say
-    const isPatron = true;
+    // 2. pledges dizisi varsa patron kabul et
+    const hasPledges = Array.isArray(relationships?.pledges?.data) &&
+                       relationships.pledges.data.length > 0;
+
+    const isPatron = isActiveInIncluded || hasPledges;
+
+    const email = req.user?.email || raw?.data?.attributes?.email || null;
+    const name = req.user.displayName || raw?.data?.attributes?.full_name || "Kullanıcı";
 
     res.json({
       isLoggedIn: true,
