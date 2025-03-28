@@ -53,7 +53,7 @@ passport.use(new PatreonStrategy({
   clientSecret: process.env.PATREON_CLIENT_SECRET,
   callbackURL: isProd
     ? "https://questionbase-o6jk.onrender.com/auth/patreon/callback"
-    : "http://localhost:3001/auth/patreon/callback",
+    : "http://localhost:3000/auth/patreon/callback",
   scope: ['identity', 'identity.memberships']
 }, async (accessToken, refreshToken, profile, done) => {
   // Giriş yapan kullanıcı bilgileri burada
@@ -81,19 +81,25 @@ app.get("/login-failed", (req, res) => {
 
 // ⭐️ Giriş yapan kullanıcı bilgisi (frontend bunu çağırır)
 app.get("/me", (req, res) => {
-  if (req.isAuthenticated()) {
-    const isPatron = req.user.rawJson?.included?.[0]?.attributes?.patron_status === "active_patron";
-    const email = req.user?.emails?.[0]?.value || null;
-    res.json({
-      isLoggedIn: true,
-      isPatron,
-      name: req.user.displayName,
-      email
-    });
-  } else {
-    res.json({ isLoggedIn: false });
-  }
-});
+    if (req.isAuthenticated()) {
+      const included = req.user?.rawJson?.included;
+      const patronAttributes = included?.[0]?.attributes;
+  
+      const isPatron = patronAttributes?.patron_status === "active_patron";
+  
+      const email = req.user?.emails?.[0]?.value || null;
+  
+      res.json({
+        isLoggedIn: true,
+        isPatron,
+        name: req.user.displayName,
+        email
+      });
+    } else {
+      res.json({ isLoggedIn: false });
+    }
+  });
+  
 
 // ⭐️ Çıkış işlemi
 app.get("/logout", (req, res) => {
