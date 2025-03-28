@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <!-- Mobil uyumlu görünüm için viewport ayarı -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Responsive Düzenlenebilir Soru Oluşturucu</title>
+  <!-- pdf.js kütüphanesi CDN üzerinden ekleniyor -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+ 
+  <style>
+    /* Ana kapsayıcı: Masaüstünde maksimum genişlikte, mobilde ise %100 genişlikte */
+    #main-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 10px;
+    }
+    /* Temel stil */
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 10px;
+      background: #f7f7f7;
+      color: #333;
+      line-height: 1.5;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    .question {
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    .question h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+    }
+    .editable-input {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    .choices-container {
+      margin-bottom: 10px;
+    }
+    /* Harf etiketleri ve inputların yan yana olması için flex düzeni */
+    .choice-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .choice-label {
+      margin-right: 10px;
+      font-weight: bold;
+      min-width: 30px;
+      font-size: 1rem;
+    }
+    .answer-section, .explanation-section {
+      margin-top: 10px;
+    }
+    /* Buton, dosya giriş ve loader'ın merkezlenmesi */
+    #file-input, #process-btn {
+      display: block;
+      margin: 10px auto;
+    }
+    #process-btn {
+      padding: 10px 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      background: #007BFF;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      transition: background 0.3s;
+    }
+    #process-btn:hover {
+      background: #0056b3;
+    }
+    /* Loader stili */
+    #loader {
+      display: none;
+      text-align: center;
+      margin-top: 10px;
+      font-size: 1rem;
+      color: #007BFF;
+    }
+    /* Action butonları stili */
+    .action-buttons {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    .action-buttons button {
+      margin-left: 10px;
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .edit-btn {
+      background: #28a745;
+      color: #fff;
+    }
+    .delete-btn {
+      background: #dc3545;
+      color: #fff;
+    }
+    /* Responsive ayarlar */
+    @media (max-width: 600px) {
+      body {
+        padding: 5px;
+      }
+      h1 {
+        font-size: 1.3rem;
+      }
+      .question {
+        padding: 10px;
+      }
+      .editable-input {
+        padding: 6px;
+        font-size: 0.9rem;
+      }
+      .choice-label {
+        font-size: 0.9rem;
+      }
+      #process-btn {
+        width: 90%;
+        padding: 10px;
+        font-size: 0.9rem;
+      }
+    }
+    /* Başlık kapsayıcı - ortalamak için */
+.title-wrapper {
+  text-align: center;
+  margin: 20px auto;
+}
+
+/* Etiket */
+.title-label {
+  font-weight: bold;
+  font-size: 1rem;
+  display: block;
+  margin-bottom: 5px;
+  color: #444;
+}
+
+/* Ortalanmış ve dar başlık input'u */
+.title-input {
+  width: 60%;
+  padding: 6px 10px;
+  font-size: 0.95rem;
+  border: 2px solid #007BFF;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 2px rgba(0, 123, 255, 0.2);
+  transition: border-color 0.3s;
+  margin: 0 auto;
+  display: block;
+}
+
+.title-input:focus {
+  outline: none;
+  border-color: #0056b3;
+}
+/* Yeni kapsayıcı: Dosya Seç + PDF'i İşle butonu */
+.file-process-wrapper {
+  text-align: center;
+  margin: 20px auto;
+}
+
+/* Ortalanmış butonlar */
+.file-button,
+#process-btn {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 5px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  background: #007BFF;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.file-button:hover,
+#process-btn:hover {
+  background: #0056b3;
+}
+
+/* Gerçek input'u gizle, sadece buton gibi göster */
+#file-input {
+  display: none;
+}
+
+#file-name-display {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 0.95rem;
+  color: #333;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+
+  </style>
+</head>
+<body>
+  <div id="main-container">
+
+    <h1>Responsive Düzenlenebilir Soru Oluşturucu</h1>
+    <select id="language-select"></select>
+    <!-- Çeviri butonu -->
+    <button id="translate-btn">Çevir</button>
+    <div class="file-process-wrapper">
+        <label for="file-input" class="file-button">Dosya Seç</label>
+        <input type="file" id="file-input" accept="application/pdf" />
+        <span id="file-name-display" style="margin-left: 10px; color: #007BFF; font-weight: 500;">
+            Hiçbir dosya seçilmedi
+          </span>
+        <button id="process-btn">PDF'i İşle</button>
+      </div>
+   
+    <div class="title-wrapper">
+        <label for="pdf-title" class="title-label">Başlık:</label>
+        <input type="text" id="pdf-title" class="title-input" placeholder="PDF başlığı otomatik gelir..." />
+      </div>
+
+    <div id="loader">Lütfen bekleyiniz, PDF işleniyor...</div>
+    <h3>PDF İçeriği (Önizleme)</h3>
+    <div style="margin: 20px 0;">
+      <button id="toggle-preview-btn" style="
+        background: #007BFF;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+      ">📄 PDF İçeriğini Göster</button>
+    
+      <div id="preview-container" style="display: none; border: 1px solid #ccc; padding: 15px; background: #f8f9fa; margin-top: 10px; max-height: 300px; overflow-y: auto;">
+        <div id="preview-content"></div>
+      </div>
+    </div>
+        <div id="output"></div>
+  </div>
+
+  <script>
+function parseToHtml(text) {
+  if (!text) return "";
+
+  const lines = text.split(/\n|(?=\d+\.\s)/g).map(line => line.trim()).filter(line => line);
+
+  let html = "";
+  let insideList = false;
+
+  lines.forEach(line => {
+    // Başlık gibi görünenler
+    if (/^\d+\.\s/.test(line)) {
+      if (insideList) {
+        html += "</ul>";
+        insideList = false;
+      }
+      html += `<h3>${line}</h3>`;
+    }
+
+    // • işareti olan liste elemanları
+    else if (/^•/.test(line)) {
+      if (!insideList) {
+        html += "<ul>";
+        insideList = true;
+      }
+      html += `<li>${line.slice(1).trim()}</li>`;
+    }
+
+    // o ile başlayan alt liste elemanları
+    else if (/^o\s/.test(line)) {
+      html += `<li style="margin-left:20px;">${line.slice(2).trim()}</li>`;
+    }
+
+    // Boşluklarla ayrılmış madde gibi görünen metinler
+    else if (line === line.toUpperCase() && line.length < 60) {
+      if (insideList) {
+        html += "</ul>";
+        insideList = false;
+      }
+      html += `<h4>${line}</h4>`;
+    }
+
+    // Normal paragraf
+    else {
+      if (insideList) {
+        html += "</ul>";
+        insideList = false;
+      }
+      html += `<p>${line}</p>`;
+    }
+  });
+
+  if (insideList) {
+    html += "</ul>";
+  }
+
+  return html;
+}
+
+
+
+
+
+    const fileInput = document.getElementById("file-input");
+    const processBtn = document.getElementById("process-btn");
+    
+    const output = document.getElementById("output");
+    const loader = document.getElementById("loader");
+
+    // Loader göster/gizle fonksiyonları
+    function showLoader() {
+      loader.style.display = "block";
+    }
+    function hideLoader() {
+      loader.style.display = "none";
+    }
+
+    processBtn.addEventListener("click", async () => {
+  if (fileInput.files.length === 0) {
+    alert("Lütfen bir PDF dosyası seçin.");
+    return;
+  }
+
+  // Başlık güncelle
+  const file = fileInput.files[0];
+  const fileNameWithoutExtension = file.name.replace(/\.[^/.]+$/, "");
+  const titleInput = document.getElementById("pdf-title");
+  if (titleInput) {
+    titleInput.value = fileNameWithoutExtension;
+  }
+
+  showLoader();
+  const fileReader = new FileReader();
+
+  fileReader.onload = async function () {
+    try {
+      const typedarray = new Uint8Array(this.result);
+      const pdf = await pdfjsLib.getDocument(typedarray).promise;
+      let text = "";
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const strings = content.items.map(item => item.str);
+        text += strings.join(" ") + "\n";
+      }
+      window.extractedPdfText = text;
+      document.getElementById("preview-content").innerHTML = parseToHtml(window.extractedPdfText || "");
+
+
+      // 👇 Kullanıcı durumuna göre soru sayısını belirle
+      let questionCount = 10; // Varsayılan: 10 soru
+      try {
+        const res = await fetch("/me");
+        const user = await res.json();
+        if (!user.isPatron) {
+          questionCount = 5;
+        }
+      } catch (err) {
+        console.warn("Kullanıcı durumu alınamadı. Ücretsiz modda devam.");
+        questionCount = 5;
+      }
+
+      // ✏️ Prompt oluştur
+      const prompt =
+        `Aşağıdaki metne dayalı olarak ${questionCount} adet çoktan seçmeli soru oluştur. ` +
+        "Her sorunun altında cevap ve açıklama bölümü olsun. Sorular ve şıkları düzenlenebilir formatta olsun. " +
+        "Soruların formatı şu şekilde olsun:\n\n" +
+        "1. [Soru metni]\na) [Şık 1]\nb) [Şık 2]\nc) [Şık 3]\nd) [Şık 4]\nCevap: [Doğru cevap]\nAçıklama: [Açıklama metni]\n\n" +
+        text;
+
+      const payload = { prompt };
+
+      const response = await fetch("????", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error("API isteği başarısız oldu.");
+      }
+
+      const result = await response.json();
+
+      if (result.reply) {
+        const questions = parseReplyText(result.reply);
+        if (questions.length !== questionCount) {
+          alert(`API'den gelen soru sayısı ${questions.length}, beklenen: ${questionCount}`);
+        }
+        displayEditableQuestions(questions);
+      } else {
+        output.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+      }
+    } catch (error) {
+      output.innerHTML = `<p style="color:red;">Hata: ${error.message}</p>`;
+    } finally {
+      hideLoader();
+    }
+  };
+
+  fileReader.readAsArrayBuffer(file);
+});
+
+    // API'nin reply metnini parse edip, soru, şıklar, cevap ve açıklama bilgilerini nesne haline getiren fonksiyon
+    function parseReplyText(replyText) {
+  const questionsArray = [];
+  const blocks = replyText.split(/\n\s*\n/);
+
+  blocks.forEach(block => {
+    const lines = block.trim().split("\n").filter(line => line.trim() !== "");
+    if (lines.length > 0) {
+      let questionObj = { question: "", choices: [], answer: "", explanation: "" };
+
+      // İlk satır: Soru metni
+      const questionLine = lines[0];
+      questionObj.question = questionLine.replace(/^\d+\.\s*/, '').trim();
+
+      // Cevap ve açıklama çıkar
+      lines.forEach(line => {
+        line = line.trim();
+        if (/^Cevap:/i.test(line)) {
+          const rawAnswer = line.replace(/^Cevap:\s*/i, '').trim();
+          // "a) doğru şık" gibi bir şeyse, sadece "doğru şık" kısmını al
+          const cleanAnswer = rawAnswer.replace(/^[a-d]\)\s*/i, '');
+          questionObj.answer = cleanAnswer;
+        } else if (/^Açıklama:/i.test(line)) {
+          questionObj.explanation = line.replace(/^Açıklama:\s*/i, '').trim();
+        }
+      });
+
+      // Şıkları çıkar (hepsi eklenecek)
+      lines.forEach(line => {
+        if (/^[a-d]\)/i.test(line)) {
+          questionObj.choices.push(line);
+        }
+      });
+
+      questionsArray.push(questionObj);
+    }
+  });
+
+  return questionsArray;
+}
+
+
+    // Parse edilmiş soruları düzenlenebilir inputlar ile ekranda gösteren fonksiyon
+    function displayEditableQuestions(questions) {
+  output.innerHTML = "";
+  questions.forEach((q, index) => {
+    const questionDiv = document.createElement("div");
+    questionDiv.className = "question";
+    questionDiv.setAttribute("data-question-number", index + 1); // Saklı soru numarası
+
+    // Soru metni
+    const questionTextarea = document.createElement("textarea");
+    questionTextarea.className = "editable-input";
+    questionTextarea.rows = 2;
+    questionTextarea.value = q.question;
+    questionTextarea.disabled = true;
+    questionDiv.appendChild(questionTextarea);
+
+    // Şıklar
+    const choicesContainer = document.createElement("div");
+    choicesContainer.className = "choices-container";
+    q.choices.forEach((choice, idx) => {
+      const choiceItem = document.createElement("div");
+      choiceItem.className = "choice-item";
+
+      const choiceLabel = document.createElement("span");
+      choiceLabel.className = "choice-label";
+      const optionLetter = String.fromCharCode(97 + idx);
+      choiceLabel.textContent = optionLetter + ")";
+      choiceLabel.style.display = "none";
+      choiceLabel.setAttribute("data-choice-letter", optionLetter);
+
+      const choiceInput = document.createElement("input");
+      choiceInput.type = "text";
+      choiceInput.className = "editable-input";
+      choiceInput.value = choice.replace(/^[a-d]\)\s*/i, '');
+      choiceInput.disabled = true;
+      choiceInput.setAttribute("data-original-choice", optionLetter);
+
+      choiceItem.appendChild(choiceLabel);
+      choiceItem.appendChild(choiceInput);
+      choicesContainer.appendChild(choiceItem);
+    });
+    questionDiv.appendChild(choicesContainer);
+
+    // Cevap (gizli)
+    const answerDiv = document.createElement("div");
+    answerDiv.className = "answer-section";
+    const answerLabel = document.createElement("label");
+    answerLabel.textContent = "Cevap:";
+    answerLabel.style.display = "none";
+    answerDiv.appendChild(answerLabel);
+    const answerInput = document.createElement("input");
+    answerInput.type = "text";
+    answerInput.className = "editable-input";
+    answerInput.value = q.answer;
+    answerInput.disabled = true;
+    answerInput.setAttribute("data-answer-letter", q.answer);
+    answerDiv.appendChild(answerInput);
+    questionDiv.appendChild(answerDiv);
+
+    // Açıklama (gizli)
+    const explanationDiv = document.createElement("div");
+    explanationDiv.className = "explanation-section";
+    const explanationLabel = document.createElement("label");
+    explanationLabel.textContent = "Açıklama:";
+    explanationLabel.style.display = "none";
+    explanationDiv.appendChild(explanationLabel);
+    const explanationTextarea = document.createElement("textarea");
+    explanationTextarea.className = "editable-input";
+    explanationTextarea.rows = 3;
+    explanationTextarea.value = q.explanation;
+    explanationTextarea.disabled = true;
+    explanationTextarea.setAttribute("data-explanation", q.explanation);
+    explanationDiv.appendChild(explanationTextarea);
+    questionDiv.appendChild(explanationDiv);
+
+    // İşlem butonları
+    const actionDiv = document.createElement("div");
+    actionDiv.className = "action-buttons";
+
+    const editButton = document.createElement("button");
+    editButton.textContent = "Düzenle";
+    editButton.className = "edit-btn";
+
+    const deleteButton = document.createElement("button");
+    deleteButton.textContent = "Sil";
+    deleteButton.className = "delete-btn";
+
+    // Düzenle / Kaydet işlevi
+    editButton.addEventListener("click", () => {
+      const fields = questionDiv.querySelectorAll("input.editable-input, textarea.editable-input");
+      const isDisabled = fields[0].disabled;
+      fields.forEach(field => {
+        field.disabled = !isDisabled;
+      });
+      editButton.textContent = isDisabled ? "Kaydet" : "Düzenle";
+    });
+
+    // Sil işlevi
+    deleteButton.addEventListener("click", () => {
+      questionDiv.remove();
+    });
+
+    actionDiv.appendChild(editButton);
+    actionDiv.appendChild(deleteButton);
+    questionDiv.appendChild(actionDiv);
+
+    // En son soruyu ekle
+    output.appendChild(questionDiv);
+  });
+
+  // ✅ Sorular geldikten sonra "Kaydet" butonunu ekle
+  const saveBtn = document.createElement("button");
+saveBtn.textContent = "💾 Soruları Kaydet";
+saveBtn.id = "save-button"; // id burada "save-button" olmalı ki diğer fonksiyonlar tanısın
+saveBtn.style.cssText = `
+  margin: 20px auto;
+  display: block;
+  background: #28a745;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+`;
+saveBtn.onclick = saveAllQuestionsToBackend;
+
+output.appendChild(saveBtn);
+
+// ⏳ Spinner ekle
+const spinner = document.createElement("div");
+spinner.id = "loading-spinner";
+spinner.textContent = "⏳ Kaydediliyor...";
+spinner.style.cssText = `
+  display: none;
+  margin-top: 10px;
+  text-align: center;
+  font-size: 1rem;
+  color: #555;
+`;
+output.appendChild(spinner);
+    }
+
+
+
+document.addEventListener("DOMContentLoaded", function () {
+  const fileInput = document.getElementById("file-input");
+  const fileNameDisplay = document.getElementById("file-name-display");
+
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files.length > 0) {
+      fileNameDisplay.textContent = fileInput.files[0].name;
+    } else {
+      fileNameDisplay.textContent = "Hiçbir dosya seçilmedi";
+    }
+  });
+});
+
+
+
+//soru database kaydetme up
+// Tüm soruları backend'e kaydet
+async function saveAllQuestionsToBackend() {
+  const saveBtn = document.getElementById("save-button");
+  const spinner = document.getElementById("loading-spinner");
+
+  saveBtn.disabled = true;
+  saveBtn.style.opacity = "0.6";
+  spinner.style.display = "block";
+
+  let user;
+  try {
+    const res = await fetch("/me");
+    user = await res.json();
+  } catch (err) {
+    alert("❌ Kullanıcı kontrol edilemedi.");
+    return resetSaveButton();
+  }
+
+  if (!user.isPatron) {
+    alert("⛔ Sadece Patreon kullanıcıları kayıt yapabilir.");
+    return resetSaveButton();
+  }
+
+  const title = document.getElementById("pdf-title").value.trim() || "Adsız";
+  const language = document.getElementById("language-select").value || "tr";
+  const questions = document.querySelectorAll(".question");
+
+  let successCount = 0;
+  let duplicateCount = 0;
+  let errorCount = 0;
+
+  for (const qEl of questions) {
+    const questionText = qEl.querySelector("textarea")?.value.trim() || "";
+    const explanation = qEl.querySelector(".explanation-section textarea")?.value.trim() || "";
+    const answer = qEl.querySelector(".answer-section input")?.value.trim() || "";
+
+    const choiceInputs = qEl.querySelectorAll(".choices-container input");
+    const options = {};
+    choiceInputs.forEach((input, index) => {
+      const key = String.fromCharCode(65 + index);
+      options[key] = input.value.trim();
+    });
+
+    const payload = {
+  question_text: questionText,
+  options,
+  correct_answer: answer,
+  explanation,
+  language,
+  category: title,
+  content: parseToHtml(window.extractedPdfText || "")
+};
+
+    try {
+      const res = await fetch("/save-question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+      if (res.status === 409) {
+        duplicateCount++;
+      } else if (!res.ok || !result.success) {
+        errorCount++;
+      } else {
+        successCount++;
+      }
+    } catch (err) {
+      errorCount++;
+    }
+  }
+
+  alert(`✅ Kayıt tamamlandı!\n✔️ Başarıyla: ${successCount}\n⚠️ Zaten ekli: ${duplicateCount}\n❌ Hatalı: ${errorCount}`);
+  resetSaveButton();
+}
+function resetSaveButton() {
+  const saveBtn = document.getElementById("save-button");
+  const spinner = document.getElementById("loading-spinner");
+  saveBtn.disabled = false;
+  saveBtn.style.opacity = "1";
+  saveBtn.textContent = "💾 Soruları Kaydet";
+  spinner.style.display = "none";
+}
+
+
+document.getElementById("toggle-preview-btn").addEventListener("click", () => {
+  const previewBox = document.getElementById("preview-container");
+  const btn = document.getElementById("toggle-preview-btn");
+
+  const isOpen = previewBox.style.display === "block";
+
+  previewBox.style.display = isOpen ? "none" : "block";
+  btn.textContent = isOpen ? "📄 PDF İçeriğini Göster" : "📄 PDF İçeriğini Gizle";
+});
+
+
+
+//soru database kaydetme down
+  </script>
+   <script src="translate.js"></script>
+   <script src="/js/user-status.js"></script>
+</body>
+</html>
