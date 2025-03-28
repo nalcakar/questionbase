@@ -33,6 +33,7 @@ app.use(session({
     sameSite: isProd ? "none" : "lax"
   }
 }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -75,36 +76,33 @@ app.get("/login-failed", (req, res) => {
   res.send(`<h2>❌ Giriş başarısız oldu</h2><a href="/">🔙 Ana sayfa</a>`);
 });
 
-// 🔍 Gelişmiş kullanıcı kontrolü
+// ✅ Gelişmiş Üyelik Kontrolü
 app.get("/me", (req, res) => {
-  if (req.isAuthenticated()) {
-    const raw = req.user.rawJson;
-    const included = raw?.included || [];
-    const relationships = raw?.data?.relationships;
+  if (!req.isAuthenticated()) return res.json({ isLoggedIn: false });
 
-    // 1. included içinde patron_status = active_patron olan var mı?
-    const isActiveInIncluded = included.some(item =>
-      item?.attributes?.patron_status === "active_patron"
-    );
+  const raw = req.user.rawJson || {};
+  const included = raw?.included || [];
+  const relationships = raw?.data?.relationships || {};
+  const pledges = relationships.pledges?.data || [];
 
-    // 2. pledges dizisi varsa patron kabul et
-    const hasPledges = Array.isArray(relationships?.pledges?.data) &&
-                       relationships.pledges.data.length > 0;
+  const isActiveInIncluded = included.some(item =>
+    item?.attributes?.patron_status === "active_patron"
+  );
 
-    const isPatron = isActiveInIncluded || hasPledges;
+  const hasPledges = Array.isArray(pledges) && pledges.length > 0;
+  const isForced = process.env.FORCE_PATRON === "true";
 
-    const email = req.user?.email || raw?.data?.attributes?.email || null;
-    const name = req.user.displayName || raw?.data?.attributes?.full_name || "Kullanıcı";
+  const isPatron = isActiveInIncluded || hasPledges || isForced;
 
-    res.json({
-      isLoggedIn: true,
-      isPatron,
-      name,
-      email
-    });
-  } else {
-    res.json({ isLoggedIn: false });
-  }
+  const email = req.user?.email || raw?.data?.attributes?.email || null;
+  const name = req.user.displayName || raw?.data?.attributes?.full_name || "Kullanıcı";
+
+  res.json({
+    isLoggedIn: true,
+    isPatron,
+    name,
+    email
+  });
 });
 
 app.get("/logout", (req, res) => {
