@@ -77,15 +77,23 @@ app.get("/login-failed", (req, res) => {
 
 app.get("/me", (req, res) => {
   if (req.isAuthenticated()) {
-    const email = req.user?.email || req.user?.rawJson?.data?.attributes?.email || null;
+    const email =
+      req.user?.email ||
+      req.user?.rawJson?.data?.attributes?.email ||
+      null;
 
-    // 🔧 TEST MODU: Üyeymiş gibi göster
+    const name =
+      req.user.displayName ||
+      req.user.rawJson?.data?.attributes?.full_name ||
+      "Kullanıcı";
+
+    // 🧪 Test Modu: Herkesi üye say
     const isPatron = true;
 
     res.json({
       isLoggedIn: true,
       isPatron,
-      name: req.user.displayName,
+      name,
       email
     });
   } else {
