@@ -12,7 +12,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const isProd = process.env.NODE_ENV === "production";
 
-// ⭐️ CORS ayarları
 app.use(cors({
   origin: [
     "http://localhost:3000",
@@ -22,11 +21,9 @@ app.use(cors({
   credentials: true
 }));
 
-// ⭐️ JSON ve statik dosyalar
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ⭐️ Oturum ayarları
 app.use(session({
   secret: process.env.SESSION_SECRET || "keyboard cat",
   resave: false,
@@ -39,7 +36,6 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ⭐️ Passport serialize işlemleri
 passport.serializeUser((user, done) => {
   done(null, user);
 });
@@ -47,7 +43,6 @@ passport.deserializeUser((obj, done) => {
   done(null, obj);
 });
 
-// ⭐️ Patreon stratejisi
 passport.use(new PatreonStrategy({
   clientID: process.env.PATREON_CLIENT_ID,
   clientSecret: process.env.PATREON_CLIENT_SECRET,
@@ -56,14 +51,19 @@ passport.use(new PatreonStrategy({
     : "http://localhost:3000/auth/patreon/callback",
   scope: ['identity', 'identity.memberships']
 }, async (accessToken, refreshToken, profile, done) => {
-  console.log("🔍 Giriş yapan kullanıcı:", JSON.stringify(profile.rawJson, null, 2));
+  try {
+    const parsed = JSON.parse(profile._raw);
+    profile.rawJson = parsed;
+    console.log("🔍 Giriş yapan kullanıcı:", JSON.stringify(parsed, null, 2));
+  } catch (e) {
+    console.error("❌ JSON parse hatası:", e);
+  }
+
   return done(null, profile);
 }));
 
-// ⭐️ Giriş başlat
 app.get("/auth/patreon", passport.authenticate("patreon"));
 
-// ⭐️ Callback dönüşü
 app.get("/auth/patreon/callback",
   passport.authenticate("patreon", {
     failureRedirect: "/login-failed",
@@ -71,25 +71,16 @@ app.get("/auth/patreon/callback",
   })
 );
 
-// ⭐️ Başarısız giriş
 app.get("/login-failed", (req, res) => {
-  res.send(`
-    <h2>❌ Giriş başarısız oldu</h2>
-    <a href="/">🔙 Ana sayfaya dön</a>
-  `);
+  res.send(`<h2>❌ Giriş başarısız oldu</h2><a href="/">🔙 Ana sayfa</a>`);
 });
 
-// ⭐️ Giriş yapan kullanıcı bilgisi
 app.get("/me", (req, res) => {
   if (req.isAuthenticated()) {
-    const included = req.user?.rawJson?.included || [];
+    const email = req.user?.email || req.user?.rawJson?.data?.attributes?.email || null;
 
-    // Tüm included dizisini kontrol et
-    const isPatron = included.some(item =>
-      item?.attributes?.patron_status === "active_patron"
-    );
-
-    const email = req.user?.emails?.[0]?.value || null;
+    // 🔧 TEST MODU: Üyeymiş gibi göster
+    const isPatron = true;
 
     res.json({
       isLoggedIn: true,
@@ -102,14 +93,12 @@ app.get("/me", (req, res) => {
   }
 });
 
-// ⭐️ Çıkış
 app.get("/logout", (req, res) => {
   req.logout(() => {
     res.redirect("/");
   });
 });
 
-// ⭐️ OpenAI bağlantısı
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
@@ -134,7 +123,6 @@ app.post("/openai", async (req, res) => {
   }
 });
 
-// 🚀 Sunucuyu başlat
 app.listen(PORT, () => {
   console.log(`🚀 Sunucu aktif: http://localhost:${PORT}`);
 });
