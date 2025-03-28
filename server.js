@@ -8,31 +8,34 @@ const PatreonStrategy = require("passport-patreon").Strategy;
 const { OpenAI } = require("openai");
 
 dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 3000;
+const isProd = process.env.NODE_ENV === "production";
 
-// ⭐️ CORS ayarı (localhost ve Render)
+// ⭐️ CORS ayarları
 app.use(cors({
-  origin: ["http://localhost:3000", "https://questionbase-o6jk.onrender.com"],
+  origin: [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://questionbase-o6jk.onrender.com"
+  ],
   credentials: true
 }));
 
-// ⭐️ JSON ve statik dosyalar
+// ⭐️ JSON desteği + statik dosya sunumu
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ⭐️ Oturum (session) ayarları
+// ⭐️ Session ayarları
 app.use(session({
   secret: process.env.SESSION_SECRET || "keyboard cat",
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // Render’da true yapılmalı
-    sameSite: "lax"
+    secure: isProd,                              // 🔒 HTTPS varsa true
+    sameSite: isProd ? "none" : "lax"            // 🧭 Render için none
   }
 }));
-
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -44,9 +47,7 @@ passport.deserializeUser((obj, done) => {
   done(null, obj);
 });
 
-// ⭐️ Patreon OAuth Stratejisi
-const isProd = process.env.NODE_ENV === "production";
-
+// ⭐️ Patreon OAuth Strategy (ortama göre URI seçimi)
 passport.use(new PatreonStrategy({
   clientID: process.env.PATREON_CLIENT_ID,
   clientSecret: process.env.PATREON_CLIENT_SECRET,
@@ -55,23 +56,30 @@ passport.use(new PatreonStrategy({
     : "http://localhost:3001/auth/patreon/callback",
   scope: ['identity', 'identity.memberships']
 }, async (accessToken, refreshToken, profile, done) => {
-  // Buraya kullanıcı kayıt/güncelleme işlemleri (istersen ekleyebiliriz)
+  // Giriş yapan kullanıcı bilgileri burada
   return done(null, profile);
 }));
 
-
-// ⭐️ Patreon giriş başlat
+// ⭐️ Giriş başlat
 app.get("/auth/patreon", passport.authenticate("patreon"));
 
-// ⭐️ Patreon giriş sonrası callback
+// ⭐️ Giriş tamamlandıktan sonra dönüş
 app.get("/auth/patreon/callback",
   passport.authenticate("patreon", {
     failureRedirect: "/login-failed",
-    successRedirect: "/" // giriş başarılı olursa ana sayfaya yönlendirilir
+    successRedirect: "/"
   })
 );
 
-// ⭐️ Giriş yapan kullanıcı bilgisi
+// ⭐️ Başarısız giriş için basit sayfa
+app.get("/login-failed", (req, res) => {
+  res.send(`
+    <h2>❌ Giriş başarısız oldu</h2>
+    <a href="/">🔙 Ana sayfaya dön</a>
+  `);
+});
+
+// ⭐️ Giriş yapan kullanıcı bilgisi (frontend bunu çağırır)
 app.get("/me", (req, res) => {
   if (req.isAuthenticated()) {
     const isPatron = req.user.rawJson?.included?.[0]?.attributes?.patron_status === "active_patron";
@@ -110,6 +118,7 @@ app.post("/openai", async (req, res) => {
       temperature: 0.7,
       max_tokens: 1500
     });
+
     const reply = completion.choices[0].message.content.trim();
     res.json({ reply });
   } catch (error) {
