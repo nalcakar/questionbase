@@ -120,6 +120,10 @@
         height: auto;
       }
     }
+    @keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
   </style>
 </head>
 <body>
@@ -146,19 +150,76 @@
     <h2>Sorular</h2>
     <div id="question-count" style="margin-bottom: 12px; font-size: 15px; color: #444;"></div>
     <button id="generate-question-btn" style="margin-bottom: 10px; padding: 8px 14px; background-color: #228be6; color: white; border: none; border-radius: 5px; cursor: pointer;">➕ Yeni Soru Oluştur</button>
+    <button id="openCustomModalBtn" style="margin-bottom: 10px; padding: 8px 14px; background-color: #845ef7; color: white; border: none; border-radius: 5px; cursor: pointer;">
+      📚 Konu Girerek Soru Üret
+      </button>
+      <!-- Yeni Konudan Soru Oluşturma Modalı -->
+<!-- Konudan Soru Üret Modalı -->
+<!-- Konudan Soru Üret Modalı -->
+<div id="topicModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:9999; justify-content:center; align-items:center;">
+  <div style="background:white; padding:20px; border-radius:10px; max-width:600px; width:90%;">
+    <h3>🧠 Konuya Göre AI Soru Oluştur</h3>
+
+    <input type="text" id="topicInput" placeholder="Konu girin..." style="width:100%; padding:10px; margin-bottom:15px; border-radius:5px; border:1px solid #ccc;" />
+
+    <label><b>Soru Metni:</b></label>
+    <textarea id="editQuestion" rows="3" style="width:100%; padding:8px; margin-bottom:10px; border-radius:5px;"></textarea>
+    <div id="generatedQuestionBox"></div>
+    <label><b>Şıklar:</b></label>
+    <input id="choiceA" placeholder="a) ..." style="width:100%; padding:8px; margin:4px 0;" />
+    <input id="choiceB" placeholder="b) ..." style="width:100%; padding:8px; margin:4px 0;" />
+    <input id="choiceC" placeholder="c) ..." style="width:100%; padding:8px; margin:4px 0;" />
+    <input id="choiceD" placeholder="d) ..." style="width:100%; padding:8px; margin:4px 0;" />
+
+    <label><b>✅ Doğru Cevap:</b></label>
+    <input id="correctAnswer" placeholder="Örn: b veya Fenerbahçe" style="width:100%; padding:8px; margin:6px 0; border:2px solid #51cf66; background:#d3f9d8; border-radius:5px;" />
+
+    <label><b>📝 Açıklama:</b></label>
+    <textarea id="editExplanation" rows="2" style="width:100%; padding:8px; border-radius:5px;"></textarea>
+    <div id="loader" style="display:none; text-align:center; margin:10px 0;">
+      <span style="display:inline-block; border:4px solid #ccc; border-top:4px solid #339af0; border-radius:50%; width:30px; height:30px; animation: spin 1s linear infinite;"></span>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+      <button id="generateFromTopicBtn" style="background:#339af0; color:white; padding:8px 14px; border:none; border-radius:5px;">🧠 Oluştur</button>
+      <button id="regenerateBtn" style="background:#20c997; color:white; padding:8px 14px; border:none; border-radius:5px;">🔁 Yenile</button>
+      <button id="saveTopicBtn" style="background:#51cf66; color:white; padding:8px 14px; border:none; border-radius:5px;">💾 Kaydet</button>
+      <button onclick="closeTopicModal()" style="background:#dee2e6; padding:8px 14px; border:none; border-radius:5px;">❌ Kapat</button>
+    </div>
+  </div>
+</div>
+
+
     <input type="text" id="searchInput" placeholder="Soru içinde ara..." style="width:100%; padding:8px; margin-bottom:10px; border-radius:6px; border:1px solid #ccc;" oninput="filterQuestions()" />
 
     <div id="questions"></div>
   </div>
-<!-- Soru Önizleme Modali -->
-<div id="questionModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
-  <div style="background:white; padding:20px; max-width:600px; width:90%; border-radius:10px;">
-    <h3>Oluşturulan Soru</h3>
-    <div id="modalContent" style="white-space:pre-wrap; font-size:15px; margin-bottom:15px;"></div>
-    <button id="confirmSaveBtn" style="background:#28a745; color:white; padding:8px 16px; border:none; border-radius:5px; margin-right:10px;">✅ Kaydet</button>
-    <button onclick="closeModal()" style="background:#dee2e6; padding:8px 16px; border:none; border-radius:5px;">❌ Vazgeç</button>
+  <div id="questionModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:white; padding:20px; max-width:600px; width:90%; border-radius:10px;">
+      <h3>📝 Oluşturulan Soru (Düzenlenebilir)</h3>
+  
+      <label><b>Soru:</b></label>
+      <textarea id="modalQuestion" rows="3" style="width:100%; padding:8px; margin-bottom:10px; border-radius:5px;"></textarea>
+  
+      <label><b>Şıklar:</b></label>
+      <input id="modalChoiceA" placeholder="a) ..." style="width:100%; padding:8px; margin:4px 0;" />
+      <input id="modalChoiceB" placeholder="b) ..." style="width:100%; padding:8px; margin:4px 0;" />
+      <input id="modalChoiceC" placeholder="c) ..." style="width:100%; padding:8px; margin:4px 0;" />
+      <input id="modalChoiceD" placeholder="d) ..." style="width:100%; padding:8px; margin:4px 0;" />
+  
+      <label><b>✅ Doğru Cevap:</b></label>
+      <input id="modalAnswer" placeholder="Örn: b veya Fenerbahçe" style="width:100%; padding:8px; margin:6px 0; border:2px solid #51cf66; background:#d3f9d8; border-radius:5px;" />
+  
+      <label><b>📝 Açıklama:</b></label>
+      <textarea id="modalExplanation" rows="2" style="width:100%; padding:8px; border-radius:5px;"></textarea>
+  
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:15px;">
+        <button id="confirmSaveBtn" style="background:#28a745; color:white; padding:8px 16px; border:none; border-radius:5px;">✅ Kaydet</button>
+        <button onclick="closeModal()" style="background:#dee2e6; padding:8px 16px; border:none; border-radius:5px;">❌ Vazgeç</button>
+        <button id="btnGenerateAgain" style="background:#339af0; color:white; padding:8px 16px; border:none; border-radius:5px;">🔁 Yeniden Oluştur</button>
+      </div>
+    </div>
   </div>
-</div>
+  
 
   <script>
     let selectedMainTopicId = null;
@@ -420,30 +481,43 @@ function filterQuestions() {
     card.style.display = questionText.includes(term) ? "block" : "none";
   });
 }
+
+function onCategoryChange(newCategoryId) {
+  selectedCategoryId = newCategoryId;
+  cachedContent = null; // yeni kategoriye geçildiği için sıfırla
+  fetchQuestions(newCategoryId);
+}
+
+let cachedContent = null;
+
 document.getElementById("generate-question-btn").addEventListener("click", async () => {
   if (!selectedCategoryId) return alert("Lütfen önce bir kategori seçin.");
 
-  const res = await fetch(`/get-category-content?category_id=${selectedCategoryId}`);
-  const data = await res.json();
-  const content = data.content;
-
-  if (!content) return alert("Bu kategoride içerik bulunamadı.");
+  if (!cachedContent) {
+    const res = await fetch(`/get-category-content?category_id=${selectedCategoryId}`);
+    const data = await res.json();
+    cachedContent = data.content;
+    console.log(cachedContent)
+    if (!cachedContent) return alert("Bu kategoride içerik bulunamadı.");
+  }
 
   const prompt = `
-Aşağıdaki metne dayalı olarak 1 adet çoktan seçmeli soru oluştur. 
-Her sorunun 4 şıkkı (a,b,c,d), cevabı ve açıklaması olsun.
+Aşağıdaki metne dayalı olarak, konuyu farklı bir açıdan ele alan, metnin herhangi bir yerinden, özgün ve düşündürücü 1 çoktan seçmeli soru üret.
 
-Format:
-1. [Soru metni]
-a) ...
-b) ...
-c) ...
-d) ...
-Cevap: ...
-Açıklama: ...
+Sorunun şıkları benzer görünmesin. Cevap ve açıklama da ekle.
+
+Biçim şöyle olsun:
+
+1. [Soru metni]  
+a) [Şık 1]  
+b) [Şık 2]  
+c) [Şık 3]  
+d) [Şık 4]  
+Cevap: [Doğru cevap]  
+Açıklama: [Kısa açıklama]
 
 Metin:
-${content}
+${cachedContent}
 `;
 
   const response = await fetch("/openai", {
@@ -460,39 +534,43 @@ ${content}
 
   // ✅ Ön izleme modal'ını doldur ve göster
   const modal = document.getElementById("questionModal");
-  const contentBox = document.getElementById("modalContent");
-  contentBox.innerText = `Soru: ${parsed.question}\n\na) ${parsed.choices.A}\nb) ${parsed.choices.B}\nc) ${parsed.choices.C}\nd) ${parsed.choices.D}\n\nCevap: ${parsed.answer}\n\nAçıklama: ${parsed.explanation}`;
-
+  fillModalFields(parsed);
+document.getElementById("questionModal").style.display = "flex";
   modal.style.display = "flex";
 
   // Modal içindeki kaydet butonuna handler bağla
   document.getElementById("confirmSaveBtn").onclick = async () => {
-    const payload = {
-  question_text: parsed.question,
-  options: parsed.choices,
-  answer: parsed.answer, // ✅ Bu doğru
-  explanation: parsed.explanation,
-  language: "tr",
-  category_id: selectedCategoryId,
-  content
+  const payload = {
+    question_text: document.getElementById("modalQuestion").value.trim(),
+    options: {
+      A: document.getElementById("modalChoiceA").value.trim(),
+      B: document.getElementById("modalChoiceB").value.trim(),
+      C: document.getElementById("modalChoiceC").value.trim(),
+      D: document.getElementById("modalChoiceD").value.trim(),
+    },
+    answer: document.getElementById("modalAnswer").value.trim(),
+    explanation: document.getElementById("modalExplanation").value.trim(),
+    language: "tr",
+    category_id: selectedCategoryId,
+    content: cachedContent || ""
+  };
+
+  const res = await fetch("/save-question-by-category-id", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const result = await res.json();
+  if (result.success) {
+    alert("✅ Soru başarıyla kaydedildi!");
+    fetchQuestions(selectedCategoryId);
+    closeModal();
+  } else {
+    alert("❌ Soru kaydedilemedi.");
+  }
 };
 
-    const saveRes = await fetch("/save-question-by-category-id", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    const saveResult = await saveRes.json();
-    if (saveResult.success) {
-      alert("✅ Soru başarıyla eklendi!");
-      fetchQuestions(selectedCategoryId);
-    } else {
-      alert("❌ Soru eklenemedi.");
-    }
-
-    closeModal();
-  };
 });
 
 function closeModal() {
@@ -533,7 +611,319 @@ function parseGeneratedQuestion(text) {
   if (!questionObj.question || !questionObj.answer) return null;
   return questionObj;
 }
+document.getElementById("btnGenerateAgain").addEventListener("click", async () => {
+  clearModalFields();
+  // Aynı işlevi yapan kod burada:
+  document.getElementById("generate-question-btn").click();
+});
 
+let parsedGenerated = null;
+
+document.getElementById("openCustomModalBtn").addEventListener("click", () => {
+  document.getElementById("topicModal").style.display = "flex";
+  document.getElementById("generatedQuestionBox").innerText = "";
+  parsedGenerated = null;
+});
+
+function closeTopicModal() {
+  document.getElementById("topicModal").style.display = "none";
+}
+
+async function generateAIQuestionFromTopic() {
+  const topic = document.getElementById("topicInput").value.trim();
+  if (!topic) return alert("Konu giriniz.");
+  if (!selectedCategoryId) return alert("Kategori seçiniz.");
+
+  showLoader(); // ← LOADER GÖSTER
+
+  const prompt = `
+"${topic}" konusuyla ilgili düşündürücü bir çoktan seçmeli soru oluştur. Şıklar benzemesin. Cevap ve açıklama da ver.
+
+Biçim:
+1. [Soru]  
+a) [Şık 1]  
+b) [Şık 2]  
+c) [Şık 3]  
+d) [Şık 4]  
+Cevap: [Doğru]  
+Açıklama: [Kısa açıklama]
+`;
+
+  try {
+    const res = await fetch("/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt })
+    });
+
+    const result = await res.json();
+    if (!result.reply) {
+      hideLoader();
+      return alert("❌ AI cevabı alınamadı.");
+    }
+
+    const parsed = parseGeneratedQuestion(result.reply);
+    if (!parsed) {
+      hideLoader();
+      return alert("⚠️ Soru ayrıştırılamadı.");
+    }
+
+    parsedGenerated = parsed;
+    fillEditFields(parsed);
+
+  } catch (err) {
+    alert("⚠️ Bir hata oluştu.");
+    console.error(err);
+  } finally {
+    hideLoader(); // ← LOADER GİZLE
+  }
+}
+
+
+async function saveGeneratedQuestion() {
+  if (!parsedGenerated) return alert("Önce bir soru üretin.");
+
+  const contentTopic = document.getElementById("topicInput").value.trim();
+
+  const payload = {
+    question_text: parsedGenerated.question,
+    options: parsedGenerated.choices,
+    answer: parsedGenerated.answer,
+    explanation: parsedGenerated.explanation,
+    language: "tr",
+    category_id: selectedCategoryId,
+    content: contentTopic
+  };
+
+  const res = await fetch("/save-question-by-category-id", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const result = await res.json();
+  if (result.success) {
+    alert("✅ Soru başarıyla kaydedildi!");
+    fetchQuestions(selectedCategoryId);
+    closeTopicModal();
+  } else {
+    alert("❌ Soru kaydedilemedi.");
+  }
+}
+
+document.getElementById("generateFromTopicBtn").addEventListener("click", generateAIQuestionFromTopic);
+document.getElementById("regenerateBtn").addEventListener("click", generateAIQuestionFromTopic);
+
+
+function clearModalFields() {
+  const modalContent = document.getElementById("modalContent");
+  if (modalContent) modalContent.innerText = "";
+}
+function parseGeneratedQuestion(text) {
+  const lines = text.trim().split("\n").filter(l => l.trim() !== "");
+  const questionObj = {
+    question: "",
+    choices: {},
+    answer: "",
+    explanation: ""
+  };
+
+  for (let line of lines) {
+    line = line.trim();
+
+    // Soru
+    if (/^\d+\.\s*/.test(line)) {
+      questionObj.question = line.replace(/^\d+\.\s*/, "").trim();
+
+    // Şıklar
+    } else if (/^a[\)|\.]\s*/i.test(line)) {
+      questionObj.choices.A = line.replace(/^a[\)|\.]\s*/i, "").trim();
+    } else if (/^b[\)|\.]\s*/i.test(line)) {
+      questionObj.choices.B = line.replace(/^b[\)|\.]\s*/i, "").trim();
+    } else if (/^c[\)|\.]\s*/i.test(line)) {
+      questionObj.choices.C = line.replace(/^c[\)|\.]\s*/i, "").trim();
+    } else if (/^d[\)|\.]\s*/i.test(line)) {
+      questionObj.choices.D = line.replace(/^d[\)|\.]\s*/i, "").trim();
+
+    // Cevap: b) Fenerbahçe veya b veya Fenerbahçe
+    } else if (/^cevap[:：\-]?\s*/i.test(line)) {
+      const answerLine = line.replace(/^cevap[:：\-]?\s*/i, "").trim();
+
+      // Eğer "b) Fenerbahçe" gibi ise:
+      const match = answerLine.match(/^([a-dA-D])[\)|\.]?\s*(.*)?$/);
+      if (match) {
+        const key = match[1].toUpperCase();
+        questionObj.answer = questionObj.choices[key] || key;
+      } else {
+        // Şıklardan biriyle doğrudan eşleşiyor mu diye kontrol et
+        for (let [key, value] of Object.entries(questionObj.choices)) {
+          if (
+            value.toLowerCase() === answerLine.toLowerCase() ||
+            key.toLowerCase() === answerLine.toLowerCase()
+          ) {
+            questionObj.answer = value;
+            break;
+          }
+        }
+        // Hiçbiri değilse doğrudan yaz
+        if (!questionObj.answer) questionObj.answer = answerLine;
+      }
+
+    // Açıklama
+    } else if (/^açıklama[:：\-]?\s*/i.test(line)) {
+      questionObj.explanation = line.replace(/^açıklama[:：\-]?\s*/i, "").trim();
+    }
+  }
+
+  // Kontrol
+  if (!questionObj.question || !questionObj.answer || Object.keys(questionObj.choices).length < 2) return null;
+
+  // Eksik şıkları boş tanımla (A-D arası)
+  ['A', 'B', 'C', 'D'].forEach(k => {
+    if (!questionObj.choices[k]) questionObj.choices[k] = "";
+  });
+
+  return questionObj;
+}
+
+
+document.getElementById("openCustomModalBtn").addEventListener("click", () => {
+  document.getElementById("topicModal").style.display = "flex";
+  parsedGenerated = null;
+  clearEditFields();
+});
+
+function closeTopicModal() {
+  document.getElementById("topicModal").style.display = "none";
+}
+
+function fillEditFields(parsed) {
+  document.getElementById("editQuestion").value = parsed.question || "";
+  document.getElementById("choiceA").value = parsed.choices.A || "";
+  document.getElementById("choiceB").value = parsed.choices.B || "";
+  document.getElementById("choiceC").value = parsed.choices.C || "";
+  document.getElementById("choiceD").value = parsed.choices.D || "";
+  document.getElementById("correctAnswer").value = parsed.answer || "";
+  document.getElementById("editExplanation").value = parsed.explanation || "";
+}
+
+function clearEditFields() {
+  document.getElementById("topicInput").value = "";
+  document.getElementById("editQuestion").value = "";
+  document.getElementById("choiceA").value = "";
+  document.getElementById("choiceB").value = "";
+  document.getElementById("choiceC").value = "";
+  document.getElementById("choiceD").value = "";
+  document.getElementById("correctAnswer").value = "";
+  document.getElementById("editExplanation").value = "";
+}
+
+async function generateAIQuestionFromTopic() {
+  const topic = document.getElementById("topicInput").value.trim();
+  if (!topic) return alert("Konu giriniz.");
+  if (!selectedCategoryId) return alert("Kategori seçiniz.");
+
+  showLoader();
+
+
+
+const prompt = `
+"${topic}" konusuyla ilgili düşündürücü bir çoktan seçmeli soru oluştur. Şıklar benzemesin. Cevap ve açıklama da ver.
+
+Biçim:
+1. [Soru]  
+a) [Şık 1]  
+b) [Şık 2]  
+c) [Şık 3]  
+d) [Şık 4]  
+Cevap: [Doğru]  
+Açıklama: [Kısa açıklama]
+`;
+
+  try {
+    const res = await fetch("/openai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt })
+    });
+
+    const result = await res.json();
+    if (!result.reply) {
+      alert("❌ AI cevabı alınamadı.");
+      return;
+    }
+
+    const parsed = parseGeneratedQuestion(result.reply);
+    if (!parsed) {
+      alert("⚠️ Soru ayrıştırılamadı.");
+      return;
+    }
+
+    parsedGenerated = parsed;
+    fillEditFields(parsed);
+
+  } catch (err) {
+    console.error("AI hatası:", err);
+    alert("❌ Bir hata oluştu.");
+  } finally {
+    hideLoader();
+  }
+}
+
+document.getElementById("generateFromTopicBtn").addEventListener("click", generateAIQuestionFromTopic);
+document.getElementById("regenerateBtn").addEventListener("click", generateAIQuestionFromTopic);
+
+document.getElementById("saveTopicBtn").addEventListener("click", async () => {
+  const payload = {
+    question_text: document.getElementById("editQuestion").value.trim(),
+    options: {
+      A: document.getElementById("choiceA").value.trim(),
+      B: document.getElementById("choiceB").value.trim(),
+      C: document.getElementById("choiceC").value.trim(),
+      D: document.getElementById("choiceD").value.trim()
+    },
+    answer: document.getElementById("correctAnswer").value.trim(),
+    explanation: document.getElementById("editExplanation").value.trim(),
+    language: "tr",
+    category_id: selectedCategoryId,
+    content: document.getElementById("topicInput").value.trim()
+  };
+
+  if (!payload.question_text || !payload.answer) return alert("Soru ve cevap boş olamaz.");
+
+  const res = await fetch("/save-question-by-category-id", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const result = await res.json();
+  if (result.success) {
+    alert("✅ Soru kaydedildi!");
+    fetchQuestions(selectedCategoryId);
+    closeTopicModal();
+  } else {
+    alert("❌ Soru kaydedilemedi.");
+  }
+});
+
+function showLoader() {
+  console.log("👀 showLoader çağrıldı");
+  document.getElementById("loader").style.display = "block";
+}
+
+function hideLoader() {
+  document.getElementById("loader").style.display = "none";
+}
+function fillModalFields(parsed) {
+  document.getElementById("modalQuestion").value = parsed.question;
+  document.getElementById("modalChoiceA").value = parsed.choices.A;
+  document.getElementById("modalChoiceB").value = parsed.choices.B;
+  document.getElementById("modalChoiceC").value = parsed.choices.C;
+  document.getElementById("modalChoiceD").value = parsed.choices.D;
+  document.getElementById("modalAnswer").value = parsed.answer;
+  document.getElementById("modalExplanation").value = parsed.explanation;
+}
   </script>
 </body>
 </html>
